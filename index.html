@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Packliste Sarn – Familien-Packliste</title>
+  
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#0F766E">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Packliste Sarn">
+  <meta name="description" content="Minimalistische Bring!-Style Familien-Packliste für unser Ferienhaus in Sarn">
+  
+  <!-- Tailwind CSS CDN with configuration -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            alpine: {
+              50: '#F0FDF9',
+              100: '#CCFBF1',
+              200: '#99F6E4',
+              500: '#14B8A6',
+              600: '#0D9488',
+              700: '#0F766E',
+              800: '#115E59',
+              900: '#134E4A',
+              950: '#042F2E',
+            },
+            sarn: {
+              card: '#F8FAFC',
+              darkcard: '#1E293B',
+              border: '#E2E8F0',
+              darkborder: '#334155'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Manifest for PWA -->
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiUGFja2xpc3RlIFNhcm4iLCJzaG9ydF9uYW1lIjoiUGFja2xpc3RlIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwRjc2NkUiLCJ0aGVtZV9jb2xvciI6IiMwRjc2NkUifQ==">
+
+  <style>
+    /* Touch optimization & smooth Bring!-like spring animations */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    input, textarea {
+      user-select: text;
+    }
+    .safe-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 12px);
+    }
+    .tile-tap {
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+    .tile-tap:active {
+      transform: scale(0.92);
+    }
+    .tile-pack-anim {
+      animation: packPop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+    }
+    @keyframes packPop {
+      0% { transform: scale(1); opacity: 1; }
+      40% { transform: scale(0.92) rotate(-2deg); background-color: #10B981; color: white; }
+      100% { transform: scale(0.85); opacity: 0; }
+    }
+    /* Hide scrollbars for clean chip horizontal scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased flex flex-col transition-colors duration-200">
+
+  <!-- ==================== TOP APP BAR ==================== -->
+  <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-sm safe-top">
+    <div class="max-w-2xl mx-auto px-4 pt-2.5 pb-2">
+      <!-- Title & Utility Controls -->
+      <div class="flex items-center justify-between gap-2 mb-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-600 to-emerald-700 flex items-center justify-center text-white shadow-sm shadow-teal-500/30">
+            <!-- Mountain / Luggage Icon -->
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5l5.5-5.5a2.12 2.12 0 013 0l6.5 6.5M14 10l2-2a2.12 2.12 0 013 0l2 2M2 20h20" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base font-bold tracking-tight leading-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+              Packliste Sarn
+              <span id="cloudStatusBadge" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300">
+                Lokal
+              </span>
+            </h1>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-none">Ferienhaus Familien-Checkliste</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <!-- Cloud / Sync Button -->
+          <button id="btnSync" onclick="triggerManualSync()" title="Synchronisieren" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95">
+            <svg id="syncIcon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          
+          <!-- Theme Toggle -->
+          <button id="btnTheme" onclick="toggleTheme()" title="Design wechseln" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95">
+            <svg id="themeIconSun" class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg id="themeIconMoon" class="w-5 h-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+
+          <!-- Settings / Menu -->
+          <button onclick="openSettingsModal()" title="Einstellungen" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- FAHRTRICHTUNG UMSCHALTER: [🚗 Nach Sarn] | [🏠 Nach Hause] -->
+      <div class="grid grid-cols-2 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl gap-1 text-xs font-semibold">
+        <button id="btnDirSarn" onclick="setTripDirection('nach_sarn')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl transition duration-150 shadow-sm bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 font-bold">
+          <span>🚗</span>
+          <span>Nach Sarn</span>
+          <span id="badgeCountSarn" class="ml-1 text-[11px] px-1.5 py-0.2 rounded-full bg-teal-100 dark:bg-teal-900/70 text-teal-800 dark:text-teal-300">0</span>
+        </button>
+        <button id="btnDirHome" onclick="setTripDirection('nach_hause')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl transition duration-150 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
+          <span>🏠</span>
+          <span>Nach Hause</span>
+          <span id="badgeCountHome" class="ml-1 text-[11px] px-1.5 py-0.2 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300">0</span>
+        </button>
+      </div>
+
+      <!-- EINGABEZEILE MIT LIVE-AUTOCOMPLETE -->
+      <div class="mt-2.5 relative">
+        <div class="relative flex items-center">
+          <div class="absolute left-3.5 text-slate-400 pointer-events-none">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input 
+            id="itemInput" 
+            type="text" 
+            placeholder="Artikel hinzufügen oder suchen..." 
+            autocomplete="off"
+            class="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/90 border border-slate-300/80 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 text-slate-800 dark:text-white placeholder:text-slate-400 shadow-inner"
+            oninput="handleInputSearch(this.value)"
+            onkeydown="handleInputKeydown(event)"
+          />
+          <button 
+            id="btnAddInput"
+            onclick="submitFromInput()"
+            title="Hinzufügen"
+            class="absolute right-1.5 w-7 h-7 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white rounded-lg flex items-center justify-center shadow-sm transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Autocomplete Dropdown -->
+        <div id="autocompleteDropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/60">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+
+      <!-- PERSONEN-AUSWAHL-CHIPS (SINGLE-SELECT) -->
+      <!-- [Haushalt] | [Lionel] | [Luke] | [Bettina] | [Tomi] -->
+      <div class="mt-2">
+        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 mb-1 px-0.5 flex items-center justify-between">
+          <span>Zuordnen für:</span>
+          <span id="activePersonLabel" class="text-teal-600 dark:text-teal-400 font-semibold lowercase">Standard: Haushalt</span>
+        </div>
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5" id="personAssignChips">
+          <!-- Generated via renderPersonAssignChips() -->
+        </div>
+      </div>
+    </div>
+
+    <!-- PERSONEN-FILTERLEISTE FÜR DIE ANSICHT -->
+    <!-- [Alle] | [Haushalt] | [Lionel] | [Luke] | [Bettina] | [Tomi] -->
+    <div class="bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200/60 dark:border-slate-800 px-4 py-1.5">
+      <div class="max-w-2xl mx-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar" id="personFilterChips">
+        <!-- Generated via renderPersonFilterChips() -->
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-4 space-y-6 overflow-y-auto">
+
+    <!-- BEREICH 1: "PACKLISTE" – HERVORRAGEND GERAHMT & INS ZENTRUM GERÜCKT -->
+    <section id="sectionActive" class="p-3.5 rounded-2xl bg-teal-50/50 dark:bg-teal-950/20 border-2 border-teal-500/40 shadow-sm space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-teal-200/50 dark:border-teal-800/40">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-sm shadow-sm">🧳</span>
+          <div>
+            <h2 class="text-xs font-black uppercase tracking-wider text-teal-900 dark:text-teal-200">
+              Aktuelle Packliste <span id="activeItemsCountBadge" class="text-teal-600 dark:text-teal-400 font-extrabold">(0)</span>
+            </h2>
+            <p class="text-[10px] text-slate-400 leading-tight">1-Klick hakt den Artikel ab</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <button onclick="packAllFiltered()" class="text-teal-700 dark:text-teal-300 hover:text-teal-900 font-semibold active:scale-95 transition flex items-center gap-1 text-[11px] bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-teal-200 dark:border-teal-800 shadow-xs">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Alle abpacken
+          </button>
+        </div>
+      </div>
+
+      <!-- Bring! 1-Klick Kacheln Raster: 3 Kacheln nebeneinander -->
+      <div id="activeTilesGrid" class="grid grid-cols-3 gap-2">
+        <!-- Rendered dynamically in 3 cols -->
+      </div>
+
+      <!-- Leerer Zustand -->
+      <div id="emptyActiveState" class="hidden text-center py-8 px-4 border border-dashed border-teal-300 dark:border-teal-800 rounded-xl bg-white/70 dark:bg-slate-900/60">
+        <div class="text-3xl mb-1">🎒</div>
+        <p class="font-bold text-slate-800 dark:text-slate-100 text-sm">Alles eingepackt!</p>
+        <p class="text-[11px] text-slate-400 mt-0.5 max-w-xs mx-auto">
+          Tippe unten im Katalog auf Artikel, um sie mit 1 Klick auf die Packliste zu setzen.
+        </p>
+      </div>
+    </section>
+
+    <!-- BEREICH 3: KATALOG & ZULETZT VERWENDET -->
+    <section id="sectionCatalog" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <span>📦</span> Artikel-Katalog
+          </h2>
+          <p class="text-[11px] text-slate-400">1-Klick auf Kachel fügt den Artikel für <b id="catalogTargetPersonLabel" class="text-teal-600 dark:text-teal-400">Haushalt</b> hinzu</p>
+        </div>
+        <button onclick="openCustomItemModal()" class="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 flex items-center gap-1 py-1 px-2 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/60 active:scale-95 transition">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Eigener Artikel
+        </button>
+      </div>
+
+      <!-- "Zuletzt verwendet / Beliebt" Schnellauswahl -->
+      <div id="recentContainer" class="space-y-2">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+          <span>⚡</span> Zuletzt verwendet
+        </h3>
+        <div id="recentTilesRow" class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Strukturierte Kategorien-Kacheln -->
+      <div id="catalogCategoriesContainer" class="space-y-5">
+        <!-- Rendered dynamically from CATALOG_DATABASE -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== ITEM ACTION MODAL (Mengen / Person / Löschen) ==================== -->
+  <div id="itemActionModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span id="modalItemIcon" class="text-2xl">📦</span>
+          <div>
+            <h3 id="modalItemTitle" class="font-bold text-slate-900 dark:text-white text-base leading-tight">Artikel</h3>
+            <p id="modalItemCategory" class="text-xs text-slate-400">Kategorie</p>
+          </div>
+        </div>
+        <button onclick="closeItemActionModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Person ändern -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Person zuweisen:</label>
+        <div id="modalPersonButtons" class="grid grid-cols-3 gap-1.5">
+          <!-- Generated via JS -->
+        </div>
+      </div>
+
+      <!-- Anzahl / Menge -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Menge / Anzahl:</label>
+        <div class="flex items-center justify-center gap-4 bg-slate-100 dark:bg-slate-800/80 rounded-xl p-2">
+          <button onclick="adjustModalItemQty(-1)" class="w-9 h-9 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold text-lg shadow-sm active:scale-95 flex items-center justify-center">-</button>
+          <span id="modalItemQty" class="text-lg font-extrabold text-teal-700 dark:text-teal-400 min-w-8 text-center">1</span>
+          <button onclick="adjustModalItemQty(1)" class="w-9 h-9 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-white font-bold text-lg shadow-sm active:scale-95 flex items-center justify-center">+</button>
+        </div>
+      </div>
+
+      <!-- Aktionen -->
+      <div class="flex gap-2 pt-2">
+        <button onclick="deleteActiveItemModal()" class="flex-1 py-2.5 px-3 rounded-xl border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-950/40 active:scale-95 transition">
+          Löschen
+        </button>
+        <button onclick="saveItemActionModal()" class="flex-1 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md shadow-teal-600/30 active:scale-95 transition">
+          Fertig
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EINSTELLUNGEN & CLOUD MODAL ==================== -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 rounded-lg">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">Einstellungen & Cloud</h3>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Cloud Google Script URL -->
+      <div class="space-y-2">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Google Apps Script Web App URL:
+        </label>
+        <input 
+          id="settingScriptUrl" 
+          type="url" 
+          placeholder="https://script.google.com/macros/s/.../exec"
+          class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-white"
+        />
+        <p class="text-[11px] text-slate-400">
+          Wenn hinterlegt, wird die Packliste automatisch mit eurem Google Sheet synchronisiert. Bleibt das Feld leer, läuft alles offline im lokalen Browser-Speicher.
+        </p>
+        <div class="flex gap-2">
+          <button onclick="saveGoogleScriptUrl()" class="py-1.5 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition">
+            URL Speichern
+          </button>
+          <button onclick="triggerManualSync()" class="py-1.5 px-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition">
+            Jetzt synchronisieren
+          </button>
+        </div>
+      </div>
+
+      <!-- Listenverwaltung -->
+      <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Packliste Aktionen:
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="confirmResetTripList()" class="p-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-semibold text-left">
+            🔄 Aktuelle Fahrt leeren
+          </button>
+          <button onclick="confirmResetToDefault()" class="p-2 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl text-xs font-semibold text-left">
+            ⚠️ Alles zurücksetzen
+          </button>
+        </div>
+      </div>
+
+      <!-- Export / Import -->
+      <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Backup & Datenaustausch:
+        </label>
+        <div class="flex gap-2">
+          <button onclick="exportDataJson()" class="flex-1 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold">
+            JSON Exportieren
+          </button>
+          <button onclick="document.getElementById('importFileInput').click()" class="flex-1 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold">
+            JSON Importieren
+          </button>
+          <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importDataJson(event)" />
+        </div>
+      </div>
+
+      <!-- Google Script Template Info -->
+      <div class="p-3 bg-slate-100 dark:bg-slate-800/60 rounded-xl text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+        <p class="font-bold text-slate-700 dark:text-slate-200">💡 Google Apps Script Template:</p>
+        <p>Ein 2-Minuten Web-App-Skript für Google Drive/Sheets kann für die Familie bereitgestellt werden (GET liefert den aktuellen JSON-Stand, POST speichert ihn).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION ==================== -->
+  <div id="toastNotification" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 px-4 py-2 rounded-full text-xs font-bold shadow-xl backdrop-blur-md transition-all">
+    <span id="toastMessage">Nachricht</span>
+  </div>
+
+  <!-- ==================== APPLICATION JAVASCRIPT ==================== -->
+  <script>
+    /**
+     * ZENTRALE CLOUD-SCHNITTSTELLE & KONFIGURATION
+     */
+    let GOOGLE_SCRIPT_URL = localStorage.getItem('packliste_sarn_script_url') || "";
+
+    /**
+     * PERSONEN DEFINITION MIT EIGENEN FARBEN & BADGES
+     */
+    const normalizePersonId = (id) => {
+      if (!id) return 'diverse';
+      const low = id.toLowerCase().trim();
+      if (low === 'haushalt' || low === 'diverse') return 'diverse';
+      if (low === 'bettina' || low === 'be') return 'be';
+      if (low === 'tomi' || low === 'to') return 'to';
+      if (low === 'lionel' || low === 'li') return 'li';
+      if (low === 'luke' || low === 'lu') return 'lu';
+      return low;
+    };
+
+    const FAMILY_MEMBERS = [
+      { id: 'diverse', name: 'Diverse', initial: 'D', colorClass: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600', dotColor: '#64748B' },
+      { id: 'be', name: 'Be', initial: 'Be', colorClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800', dotColor: '#E11D48' },
+      { id: 'to', name: 'To', initial: 'To', colorClass: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800', dotColor: '#6366F1' },
+      { id: 'li', name: 'Li', initial: 'Li', colorClass: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-300 dark:border-sky-800', dotColor: '#0284C7' },
+      { id: 'lu', name: 'Lu', initial: 'Lu', colorClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800', dotColor: '#D97706' }
+    ];
+
+    /**
+     * GRUNDKATALOG DER ARTIKEL (exakt gemäss Spezifikation)
+     */
+    const CATALOG_DATABASE = [
+      {
+        id: 'textilien',
+        title: 'Haushalt / Textilien & Bettwäsche',
+        icon: '🛏️',
+        items: [
+          { name: 'Frottetuch Hand', icon: '🧖', defaultPerson: 'haushalt' },
+          { name: 'Frottetuch Duschen', icon: '🛁', defaultPerson: 'haushalt' },
+          { name: 'Waschlappen', icon: '🧼', defaultPerson: 'haushalt' },
+          { name: 'Fusstuch Dusche', icon: '👣', defaultPerson: 'haushalt' },
+          { name: 'Fixleintücher 90', icon: '🛏️', defaultPerson: 'haushalt' },
+          { name: 'Fixleintücher 160', icon: '🛌', defaultPerson: 'haushalt' },
+          { name: 'Bettzeug Kids', icon: '🧸', defaultPerson: 'haushalt' },
+          { name: 'Bettzeug Eltern', icon: '✨', defaultPerson: 'haushalt' },
+          { name: 'Bettzeug Gäste', icon: '🏡', defaultPerson: 'haushalt' }
+        ]
+      },
+      {
+        id: 'kueche',
+        title: 'Haushalt / Küche & Verbrauch',
+        icon: '🍳',
+        items: [
+          { name: 'Küche Lumpen', icon: '🧽', defaultPerson: 'haushalt' },
+          { name: 'Küche Tüechli', icon: '🍽️', defaultPerson: 'haushalt' },
+          { name: 'Kleenex', icon: '🧻', defaultPerson: 'haushalt' },
+          { name: 'Haushaltspapier', icon: '📜', defaultPerson: 'haushalt' },
+          { name: 'Bodenmopp', icon: '🧹', defaultPerson: 'haushalt' },
+          { name: 'Holz', icon: '🪵', defaultPerson: 'haushalt' },
+          { name: 'Sonnencreme', icon: '☀️', defaultPerson: 'haushalt' },
+          { name: 'neue Packliste', icon: '📋', defaultPerson: 'haushalt' }
+        ]
+      },
+      {
+        id: 'bekleidung',
+        title: 'Bekleidung & Wäsche (Allgemein)',
+        icon: '👕',
+        items: [
+          { name: 'Pijama', icon: '🌙', defaultPerson: 'haushalt' },
+          { name: 'Unterhosen', icon: '🩲', defaultPerson: 'haushalt' },
+          { name: 'Singlet', icon: '🎽', defaultPerson: 'haushalt' },
+          { name: 'Socken', icon: '🧦', defaultPerson: 'haushalt' },
+          { name: 'Jeans', icon: '👖', defaultPerson: 'haushalt' },
+          { name: 'Hosen', icon: '👖', defaultPerson: 'haushalt' },
+          { name: 'Pullover', icon: '🧶', defaultPerson: 'haushalt' },
+          { name: 'T-Shirt kurz', icon: '👕', defaultPerson: 'haushalt' },
+          { name: 'T-shirt lang', icon: '👔', defaultPerson: 'haushalt' },
+          { name: 'Trainerhosen', icon: '🏃', defaultPerson: 'haushalt' },
+          { name: 'Hoodie', icon: '🧥', defaultPerson: 'haushalt' },
+          { name: 'Shorts', icon: '🩳', defaultPerson: 'haushalt' },
+          { name: 'Fleece', icon: '🏔️', defaultPerson: 'haushalt' }
+        ]
+      },
+      {
+        id: 'sport',
+        title: 'Sport & Outdoor (Sommer & Winter)',
+        icon: '🎿',
+        items: [
+          { name: 'Badehose', icon: '🩱', defaultPerson: 'haushalt' },
+          { name: 'Bikini', icon: '👙', defaultPerson: 'bettina' },
+          { name: 'Bikehose', icon: '🚴', defaultPerson: 'haushalt' },
+          { name: 'Rashy', icon: '🏄', defaultPerson: 'haushalt' },
+          { name: 'Hut', icon: '👒', defaultPerson: 'haushalt' },
+          { name: 'Wanderhose', icon: '🥾', defaultPerson: 'haushalt' },
+          { name: 'Wandersocken', icon: '🧦', defaultPerson: 'haushalt' },
+          { name: 'Skisocken', icon: '⛷️', defaultPerson: 'haushalt' },
+          { name: 'Skijacke', icon: '🧥', defaultPerson: 'haushalt' },
+          { name: 'Skihosen', icon: '🏂', defaultPerson: 'haushalt' },
+          { name: 'Helmstrumpf', icon: '🪖', defaultPerson: 'haushalt' },
+          { name: 'Thermo Oberteil', icon: '❄️', defaultPerson: 'haushalt' },
+          { name: 'Thermo Hosen', icon: '⛄', defaultPerson: 'haushalt' },
+          { name: 'Kappe', icon: '🧢', defaultPerson: 'haushalt' },
+          { name: 'Merino kurz', icon: '🐑', defaultPerson: 'haushalt' },
+          { name: 'Merino lang', icon: '🐏', defaultPerson: 'haushalt' },
+          { name: 'Lange Unterhosen', icon: '🩲', defaultPerson: 'haushalt' },
+          { name: 'BH', icon: '👚', defaultPerson: 'bettina' }
+        ]
+      },
+      {
+        id: 'retour',
+        title: 'Feste Retour-Artikel (für "Nach Hause")',
+        icon: '🚗',
+        items: [
+          { name: 'Kompost', icon: '🌱', defaultPerson: 'haushalt' },
+          { name: 'Brille', icon: '👓', defaultPerson: 'tomi' },
+          { name: 'Kuscheltierli', icon: '🧸', defaultPerson: 'luke' },
+          { name: 'Medis', icon: '💊', defaultPerson: 'haushalt' },
+          { name: 'Wanderschuhe', icon: '🥾', defaultPerson: 'haushalt' },
+          { name: 'Windjacken', icon: '🧥', defaultPerson: 'haushalt' },
+          { name: 'Keens', icon: '👟', defaultPerson: 'haushalt' },
+          { name: 'Sonnencreme', icon: '☀️', defaultPerson: 'haushalt' },
+          { name: 'Winterschuhe', icon: '🥾', defaultPerson: 'haushalt' },
+          { name: 'Schlittschuhe', icon: '⛸️', defaultPerson: 'haushalt' },
+          { name: 'Spange Lionel', icon: '🦷', defaultPerson: 'lionel' }
+        ]
+      }
+    ];
+
+    /**
+     * INITIALE DEFAULT-LISTE FÜR DIE BEIDEN RICHTUNGEN
+     */
+    function getDefaultState() {
+      return {
+        nach_sarn: [
+          { id: 'ns_1', name: 'Frottetuch Hand', person: 'haushalt', icon: '🧖', packed: false, qty: 1 },
+          { id: 'ns_2', name: 'Frottetuch Duschen', person: 'haushalt', icon: '🛁', packed: false, qty: 1 },
+          { id: 'ns_3', name: 'Fixleintücher 90', person: 'haushalt', icon: '🛏️', packed: false, qty: 2 },
+          { id: 'ns_4', name: 'Bettzeug Kids', person: 'haushalt', icon: '🧸', packed: false, qty: 1 },
+          { id: 'ns_5', name: 'Pijama', person: 'lionel', icon: '🌙', packed: false, qty: 1 },
+          { id: 'ns_6', name: 'Pijama', person: 'luke', icon: '🌙', packed: false, qty: 1 },
+          { id: 'ns_7', name: 'Spange Lionel', person: 'lionel', icon: '🦷', packed: false, qty: 1 },
+          { id: 'ns_8', name: 'Kuscheltierli', person: 'luke', icon: '🧸', packed: false, qty: 1 },
+          { id: 'ns_9', name: 'Sonnencreme', person: 'haushalt', icon: '☀️', packed: false, qty: 1 },
+          { id: 'ns_10', name: 'Küche Lumpen', person: 'haushalt', icon: '🧽', packed: true, qty: 1 }
+        ],
+        nach_hause: [
+          { id: 'nh_1', name: 'Kompost', person: 'haushalt', icon: '🌱', packed: false, qty: 1 },
+          { id: 'nh_2', name: 'Brille', person: 'tomi', icon: '👓', packed: false, qty: 1 },
+          { id: 'nh_3', name: 'Spange Lionel', person: 'lionel', icon: '🦷', packed: false, qty: 1 },
+          { id: 'nh_4', name: 'Kuscheltierli', person: 'luke', icon: '🧸', packed: false, qty: 1 },
+          { id: 'nh_5', name: 'Medis', person: 'haushalt', icon: '💊', packed: false, qty: 1 },
+          { id: 'nh_6', name: 'Wanderschuhe', person: 'haushalt', icon: '🥾', packed: false, qty: 1 },
+          { id: 'nh_7', name: 'Windjacken', person: 'haushalt', icon: '🧥', packed: false, qty: 1 }
+        ]
+      };
+    }
+
+    /**
+     * APP STATE
+     */
+    let appData = {
+      currentDirection: 'nach_sarn', // 'nach_sarn' | 'nach_hause'
+      activeAssignPerson: 'diverse',
+      activeFilterPerson: 'alle',
+      lists: loadFromStorage() || getDefaultState(),
+      recents: ['Pijama', 'Frottetuch Hand', 'Sonnencreme', 'Spange Lionel', 'Kuscheltierli', 'Wanderschuhe'],
+      isPackedSectionOpen: false
+    };
+
+    let editingItemModalRef = null;
+
+    // Speichern & Laden
+    function saveToStorage(triggerPush = true) {
+      try {
+        localStorage.setItem('packliste_sarn_data_v2', JSON.stringify(appData.lists));
+        localStorage.setItem('packliste_sarn_recents', JSON.stringify(appData.recents));
+      } catch (e) {
+        console.error('Storage error', e);
+      }
+      // Wenn Cloud-URL vorhanden ist, asynchron pushen
+      if (triggerPush && GOOGLE_SCRIPT_URL) {
+        pushToGoogleSheet();
+      }
+    }
+
+    function loadFromStorage() {
+      try {
+        const stored = localStorage.getItem('packliste_sarn_data_v2');
+        if (stored) return JSON.parse(stored);
+      } catch (e) {
+        console.error('Storage load error', e);
+      }
+      return null;
+    }
+
+    function deriveCategory(name) {
+      const lower = (name || '').toLowerCase();
+      if (lower.includes("ski") || lower.includes("wandern") || lower.includes("bad") || lower.includes("sport") || lower.includes("bike")) {
+        return "Sport & Outdoor";
+      }
+      if (lower.includes("tuch") || lower.includes("bett") || lower.includes("kissen") || lower.includes("laken")) {
+        return "Textilien & Bettwäsche";
+      }
+      if (lower.includes("küche") || lower.includes("seife") || lower.includes("papier") || lower.includes("lumpen")) {
+        return "Küche & Verbrauch";
+      }
+      if (lower.includes("hose") || lower.includes("pijama") || lower.includes("hemd") || lower.includes("shirt") || lower.includes("socken")) {
+        return "Bekleidung & Wäsche";
+      }
+      return "Allgemein";
+    }
+
+    function getCurrentLocalItems() {
+      const sarn = (appData.lists && appData.lists.nach_sarn) || [];
+      const home = (appData.lists && appData.lists.nach_hause) || [];
+
+      const sarnItems = sarn.map(item => ({
+        id: String(item.id || ('item_' + Math.random().toString(36).substr(2, 6))),
+        direction: 'sarn',
+        name: item.name,
+        person: item.person || 'diverse',
+        packed: Boolean(item.packed),
+        category: item.category || deriveCategory(item.name),
+        qty: parseInt(item.qty || 1, 10) || 1,
+        icon: item.icon || findIconForItem(item.name)
+      }));
+
+      const homeItems = home.map(item => ({
+        id: String(item.id || ('item_' + Math.random().toString(36).substr(2, 6))),
+        direction: 'home',
+        name: item.name,
+        person: item.person || 'diverse',
+        packed: Boolean(item.packed),
+        category: item.category || deriveCategory(item.name),
+        qty: parseInt(item.qty || 1, 10) || 1,
+        icon: item.icon || findIconForItem(item.name)
+      }));
+
+      return [...sarnItems, ...homeItems];
+    }
+
+    /**
+     * CLOUD SCHNITTSTELLE (GOOGLE APPS SCRIPT)
+     * Robuste, CORS-sichere Synchronisation ohne OPTIONS-Preflight
+     */
+    async function syncWithGoogleSheet() {
+      if (!GOOGLE_SCRIPT_URL) {
+        showToast('Keine Cloud-URL hinterlegt (arbeitet lokal)');
+        return;
+      }
+      const syncIcon = document.getElementById('syncIcon');
+      if (syncIcon) syncIcon.classList.add('animate-spin');
+
+      try {
+        // 1. Hole die lokalen Daten aus dem State / localStorage
+        const currentLocalItems = getCurrentLocalItems();
+
+        // 2. CORS-sicherer POST-Request:
+        // Kein 'application/json', sondern zwingend text/plain;charset=utf-8
+        // Google Apps Script liest e.postData.contents als JSON, der Browser unterdrückt den OPTIONS Preflight
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            active_items: currentLocalItems,
+            nach_sarn: (appData.lists && appData.lists.nach_sarn) || [],
+            nach_hause: (appData.lists && appData.lists.nach_hause) || []
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Netzwerk-Antwort war nicht ok (HTTP ' + response.status + ')');
+        }
+
+        const data = await response.json();
+
+        // 3. Prüfe die Serverantwort:
+        // Nur wenn response.status === "success" UND response.active_items existiert
+        if (data && data.status === "success" && data.active_items !== undefined) {
+          const serverItems = Array.isArray(data.active_items) ? data.active_items : [];
+
+          // Wenn der Server 0 Items meldet, aber lokal Items vorhanden sind:
+          // Überschreibe NICHT blind, sondern lade die lokalen Items erneut hoch!
+          if (serverItems.length === 0 && currentLocalItems.length > 0) {
+            console.warn('Server meldete 0 Items trotz vorhandener lokaler Daten. Lade lokale Items erneut hoch...');
+            await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+              },
+              body: JSON.stringify({
+                active_items: currentLocalItems,
+                nach_sarn: (appData.lists && appData.lists.nach_sarn) || [],
+                nach_hause: (appData.lists && appData.lists.nach_hause) || []
+              })
+            });
+            showToast('☁️ Lokale Liste hochgeladen');
+            updateCloudStatusBadge(true);
+            return;
+          }
+
+          // Aktualisiere den lokalen Zustand mit den gemergten Server-Daten und rendere die Liste neu
+          const mergedSarn = [];
+          const mergedHome = [];
+
+          serverItems.forEach(rawItem => {
+            const dir = String(rawItem.Richtung || rawItem.direction || 'sarn').toLowerCase();
+            const isSarn = dir === 'sarn' || dir === 'nach_sarn';
+            const name = String(rawItem.Artikel || rawItem.name || '').trim();
+            if (!name) return;
+
+            const id = String(rawItem.ID || rawItem.id || ('item_' + Math.random().toString(36).substr(2, 6)));
+            const person = normalizePersonId(String(rawItem.Person || rawItem.person || 'diverse'));
+            const isPacked = rawItem.Status !== undefined 
+              ? (String(rawItem.Status).toLowerCase() === 'packed')
+              : Boolean(rawItem.packed);
+            const qty = parseInt(rawItem.Menge || rawItem.qty || 1, 10) || 1;
+            const category = String(rawItem.Kategorie || rawItem.category || deriveCategory(name));
+            const icon = rawItem.icon || findIconForItem(name);
+
+            const parsedItem = { id, name, person, packed: isPacked, qty, category, icon };
+            if (isSarn) {
+              mergedSarn.push(parsedItem);
+            } else {
+              mergedHome.push(parsedItem);
+            }
+          });
+
+          // Lokale Items beibehalten, falls noch nicht im Serverstand enthalten
+          currentLocalItems.forEach(loc => {
+            const isSarn = (loc.direction === 'sarn' || loc.direction === 'nach_sarn');
+            const targetList = isSarn ? mergedSarn : mergedHome;
+            const exists = targetList.some(item =>
+              item.id === loc.id || (item.name.toLowerCase() === loc.name.toLowerCase() && item.person === loc.person)
+            );
+            if (!exists) {
+              targetList.push({
+                id: loc.id,
+                name: loc.name,
+                person: loc.person,
+                packed: loc.packed || false,
+                qty: loc.qty || 1,
+                category: loc.category || deriveCategory(loc.name),
+                icon: loc.icon || findIconForItem(loc.name)
+              });
+            }
+          });
+
+          appData.lists.nach_sarn = mergedSarn;
+          appData.lists.nach_hause = mergedHome;
+          saveToStorage(false); // Lokal sichern ohne zusätzlichen Push
+          renderAll();
+          showToast('☁️ Erfolgreich synchronisiert!');
+          updateCloudStatusBadge(true);
+        } else if (data && data.status === "success") {
+          // Falls Backend status: success ohne active_items liefert (Server hat geschrieben)
+          updateCloudStatusBadge(true);
+          showToast('☁️ Daten erfolgreich im Google Sheet aktualisiert!');
+        } else {
+          throw new Error((data && data.message) ? data.message : 'Unerwartetes Server-Antwortformat');
+        }
+      } catch (err) {
+        console.error('Google Sheet Sync Fehler:', err);
+        // Fange Netzwerkfehler sauber im catch-Block ab:
+        // Zeige eine rote Fehlermeldung, OHNE die lokalen Daten anzurühren
+        showToast('Sync fehlgeschlagen: Verbindung prüfen', true);
+      } finally {
+        if (syncIcon) syncIcon.classList.remove('animate-spin');
+      }
+    }
+
+    async function pushToGoogleSheet() {
+      if (!GOOGLE_SCRIPT_URL) return;
+      try {
+        const currentLocalItems = getCurrentLocalItems();
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            active_items: currentLocalItems,
+            nach_sarn: (appData.lists && appData.lists.nach_sarn) || [],
+            nach_hause: (appData.lists && appData.lists.nach_hause) || []
+          })
+        });
+        updateCloudStatusBadge(true);
+      } catch (err) {
+        console.warn('Hintergrund-Push zu Google Sheet fehlgeschlagen:', err);
+      }
+    }
+
+    function triggerManualSync() {
+      syncWithGoogleSheet();
+    }
+
+    function updateCloudStatusBadge(synced) {
+      const badge = document.getElementById('cloudStatusBadge');
+      if (!badge) return;
+      if (GOOGLE_SCRIPT_URL) {
+        badge.textContent = synced ? 'Cloud ✓' : 'Cloud';
+        badge.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300';
+      } else {
+        badge.textContent = 'Lokal';
+        badge.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+      }
+    }
+
+    /**
+     * INITIALISIERUNG
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      // Theme Init
+      initTheme();
+      // Recents Init
+      try {
+        const rec = localStorage.getItem('packliste_sarn_recents');
+        if (rec) appData.recents = JSON.parse(rec);
+      } catch (e) {}
+
+      updateCloudStatusBadge(false);
+      renderAll();
+
+      // Click outside dropdown handler
+      document.addEventListener('click', (e) => {
+        const dd = document.getElementById('autocompleteDropdown');
+        const inp = document.getElementById('itemInput');
+        if (dd && !dd.contains(e.target) && e.target !== inp) {
+          dd.classList.add('hidden');
+        }
+      });
+    });
+
+    /**
+     * RENDER MASTER
+     */
+    function renderAll() {
+      renderTripToggle();
+      renderPersonAssignChips();
+      renderPersonFilterChips();
+      renderActiveTiles();
+      renderPackedTiles();
+      renderCatalog();
+      renderRecents();
+      updateBadgesAndCounts();
+    }
+
+    /**
+     * UMSCHALTER: NACH SARN / NACH HAUSE
+     */
+    function setTripDirection(dir) {
+      if (appData.currentDirection === dir) return;
+      appData.currentDirection = dir;
+      renderAll();
+      showToast(dir === 'nach_sarn' ? '🚗 Modus: Nach Sarn' : '🏠 Modus: Nach Hause');
+    }
+
+    function renderTripToggle() {
+      const isSarn = appData.currentDirection === 'nach_sarn';
+      const btnSarn = document.getElementById('btnDirSarn');
+      const btnHome = document.getElementById('btnDirHome');
+
+      if (isSarn) {
+        btnSarn.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl transition duration-150 shadow-sm bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 font-bold";
+        btnHome.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl transition duration-150 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100";
+      } else {
+        btnHome.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl transition duration-150 shadow-sm bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 font-bold";
+        btnSarn.className = "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl transition duration-150 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100";
+      }
+    }
+
+    /**
+     * PERSONEN-ZUWEISUNGS CHIPS
+     */
+    function renderPersonAssignChips() {
+      const container = document.getElementById('personAssignChips');
+      if (!container) return;
+      container.innerHTML = FAMILY_MEMBERS.map(m => {
+        const isSelected = appData.activeAssignPerson === m.id;
+        const activeClasses = isSelected
+          ? 'bg-teal-600 text-white font-bold shadow-md shadow-teal-600/30 ring-2 ring-teal-500 ring-offset-1 dark:ring-offset-slate-900'
+          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        return `
+          <button 
+            onclick="setAssignPerson('${m.id}')"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition duration-150 active:scale-95 whitespace-nowrap ${activeClasses}">
+            <span class="w-2 h-2 rounded-full" style="background-color: ${m.dotColor}"></span>
+            <span>${m.name}</span>
+          </button>
+        `;
+      }).join('');
+
+      const label = document.getElementById('activePersonLabel');
+      const cur = FAMILY_MEMBERS.find(f => f.id === appData.activeAssignPerson);
+      if (label && cur) label.textContent = `Aktiv: ${cur.name}`;
+
+      const catLabel = document.getElementById('catalogTargetPersonLabel');
+      if (catLabel && cur) catLabel.textContent = cur.name;
+    }
+
+    function setAssignPerson(personId) {
+      appData.activeAssignPerson = personId;
+      renderPersonAssignChips();
+    }
+
+    /**
+     * PERSONEN-FILTER CHIPS
+     */
+    function renderPersonFilterChips() {
+      const container = document.getElementById('personFilterChips');
+      if (!container) return;
+
+      const currentList = appData.lists[appData.currentDirection] || [];
+      const activeItems = currentList.filter(item => !item.packed);
+
+      // "Alle" Chip
+      const allCount = activeItems.length;
+      const isAll = appData.activeFilterPerson === 'alle';
+      const allClasses = isAll 
+        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold shadow-sm'
+        : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
+
+      let html = `
+        <button 
+          onclick="setFilterPerson('alle')"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs transition active:scale-95 whitespace-nowrap ${allClasses}">
+          <span>Alle</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isAll ? 'bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}">${allCount}</span>
+        </button>
+      `;
+
+      // Pro Person
+      html += FAMILY_MEMBERS.map(m => {
+        const pCount = activeItems.filter(i => normalizePersonId(i.person) === m.id).length;
+        const isSelected = appData.activeFilterPerson === m.id;
+        const activeClasses = isSelected
+          ? 'bg-teal-700 text-white dark:bg-teal-500 dark:text-slate-950 font-bold shadow-sm'
+          : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
+        return `
+          <button 
+            onclick="setFilterPerson('${m.id}')"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition active:scale-95 whitespace-nowrap ${activeClasses}">
+            <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${m.dotColor}"></span>
+            <span>${m.name}</span>
+            <span class="text-[10px] px-1 py-0.2 rounded-full ${isSelected ? 'bg-teal-900 text-teal-200 dark:bg-teal-700 dark:text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}">${pCount}</span>
+          </button>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function setFilterPerson(personId) {
+      appData.activeFilterPerson = personId;
+      renderPersonFilterChips();
+      renderActiveTiles();
+      renderPackedTiles();
+    }
+
+    /**
+     * BEREICH "EINZUPACKEN" (AKTIVE KACHELN)
+     */
+    function renderActiveTiles() {
+      const grid = document.getElementById('activeTilesGrid');
+      const emptyState = document.getElementById('emptyActiveState');
+      if (!grid) return;
+
+      const currentList = appData.lists[appData.currentDirection] || [];
+      let items = currentList.filter(i => !i.packed);
+
+      if (appData.activeFilterPerson !== 'alle') {
+        items = items.filter(i => normalizePersonId(i.person) === normalizePersonId(appData.activeFilterPerson));
+      }
+
+      if (items.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      grid.innerHTML = items.map(item => {
+        const personObj = FAMILY_MEMBERS.find(f => f.id === normalizePersonId(item.person)) || FAMILY_MEMBERS[0];
+        const qtyBadge = (item.qty && item.qty > 1) ? `<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-teal-600 text-white shadow-sm">${item.qty}x</span>` : '';
+
+        return `
+          <div 
+            id="tile-${item.id}"
+            onclick="onActiveTileClick('${item.id}')"
+            style="border-color: ${personObj.dotColor}88; background-color: ${personObj.dotColor}14;"
+            class="tile-tap relative flex flex-col justify-between p-3.5 rounded-2xl border-2 shadow-sm hover:shadow-md hover:scale-[1.02] cursor-pointer min-h-[105px] group">
+            
+            <!-- Top Row: Person Badge & Qty -->
+            <div class="flex items-center justify-between w-full">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${personObj.colorClass}">
+                <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${personObj.dotColor}"></span>
+                ${personObj.name}
+              </span>
+              ${qtyBadge}
+            </div>
+
+            <!-- Center Icon -->
+            <div class="flex items-center justify-center py-1">
+              <span class="text-3xl filter drop-shadow-sm group-hover:scale-110 transition-transform duration-150">${item.icon || '📦'}</span>
+            </div>
+
+            <!-- Bottom Label & More button -->
+            <div class="flex items-center justify-between gap-1 mt-1">
+              <span class="font-bold text-sm text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight">${item.name}</span>
+              <button 
+                onclick="event.stopPropagation(); openItemActionModal('${item.id}')" 
+                title="Bearbeiten" 
+                class="opacity-60 hover:opacity-100 p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * 1-KLICK AKTION AUF EINZUPACKENDE KACHEL
+     * Spielt kurze Animation ab und setzt den Status auf "packed".
+     */
+    function onActiveTileClick(itemId) {
+      const tileEl = document.getElementById(`tile-${itemId}`);
+      if (tileEl) {
+        tileEl.classList.add('tile-pack-anim');
+      }
+
+      setTimeout(() => {
+        const currentList = appData.lists[appData.currentDirection] || [];
+        const item = currentList.find(i => i.id === itemId);
+        if (item) {
+          item.packed = true;
+          // Zur "Zuletzt verwendet"-Liste hinzufügen
+          addToRecents(item.name);
+          saveToStorage();
+          renderActiveTiles();
+          renderPackedTiles();
+          renderPersonFilterChips();
+          renderCatalog();
+          renderRecents();
+          updateBadgesAndCounts();
+        }
+      }, 160);
+    }
+
+    /**
+     * BEREICH "BEREITS EINGEPACKT"
+     */
+    function togglePackedSection() {
+      appData.isPackedSectionOpen = !appData.isPackedSectionOpen;
+      const container = document.getElementById('packedContentContainer');
+      const chevron = document.getElementById('packedChevron');
+      if (container && chevron) {
+        if (appData.isPackedSectionOpen) {
+          container.classList.remove('hidden');
+          chevron.classList.add('rotate-180');
+        } else {
+          container.classList.add('hidden');
+          chevron.classList.remove('rotate-180');
+        }
+      }
+    }
+
+    function renderPackedTiles() {
+      const grid = document.getElementById('packedTilesGrid');
+      if (!grid) return;
+
+      const currentList = appData.lists[appData.currentDirection] || [];
+      let packedItems = currentList.filter(i => i.packed);
+
+      if (appData.activeFilterPerson !== 'alle') {
+        packedItems = packedItems.filter(i => i.person === appData.activeFilterPerson);
+      }
+
+      if (packedItems.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-4 text-xs text-slate-400">
+            Noch keine Artikel abgehakt
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = packedItems.map(item => {
+        const personObj = FAMILY_MEMBERS.find(f => f.id === item.person) || FAMILY_MEMBERS[0];
+        return `
+          <div 
+            onclick="uncheckPackedItem('${item.id}')"
+            title="Tippen zum wieder einpacken"
+            class="tile-tap relative flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition">
+            
+            <div class="flex items-center gap-2 overflow-hidden">
+              <span class="text-lg opacity-70">${item.icon || '📦'}</span>
+              <div class="overflow-hidden">
+                <span class="text-xs font-medium line-through text-slate-500 dark:text-slate-400 truncate block">${item.name}</span>
+                <span class="text-[9px] px-1 py-0.2 rounded font-semibold inline-block ${personObj.colorClass} opacity-80">${personObj.name}</span>
+              </div>
+            </div>
+
+            <div class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function uncheckPackedItem(itemId) {
+      const currentList = appData.lists[appData.currentDirection] || [];
+      const item = currentList.find(i => i.id === itemId);
+      if (item) {
+        item.packed = false;
+        saveToStorage();
+        renderAll();
+        showToast(`↩️ "${item.name}" wieder auf die Liste gesetzt`);
+      }
+    }
+
+    function resetAllPackedToActive() {
+      const currentList = appData.lists[appData.currentDirection] || [];
+      currentList.forEach(i => i.packed = false);
+      saveToStorage();
+      renderAll();
+      showToast('Alle abgehakten Artikel wieder aktiviert!');
+    }
+
+    function packAllFiltered() {
+      const currentList = appData.lists[appData.currentDirection] || [];
+      let count = 0;
+      currentList.forEach(i => {
+        if (!i.packed && (appData.activeFilterPerson === 'alle' || i.person === appData.activeFilterPerson)) {
+          i.packed = true;
+          count++;
+        }
+      });
+      if (count > 0) {
+        saveToStorage();
+        renderAll();
+        showToast(`✓ ${count} Artikel eingepackt!`);
+      }
+    }
+
+    /**
+     * KATALOG RENDERING & 1-KLICK LOGIK
+     */
+    function renderCatalog() {
+      const container = document.getElementById('catalogCategoriesContainer');
+      if (!container) return;
+
+      const currentList = appData.lists[appData.currentDirection] || [];
+
+      container.innerHTML = CATALOG_DATABASE.map(cat => {
+        const tilesHtml = cat.items.map(item => {
+          // Check if item is already in active list for the selected person or in general
+          const activeEntry = currentList.find(i => !i.packed && i.name.toLowerCase() === item.name.toLowerCase());
+          const isItemActive = !!activeEntry;
+          const assignedPerson = activeEntry ? FAMILY_MEMBERS.find(f => f.id === activeEntry.person) : null;
+
+          return `
+            <button 
+              onclick="onCatalogTileClick('${encodeURIComponent(item.name)}', '${item.icon}')"
+              class="tile-tap relative flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition duration-150 min-h-[92px] ${
+                isItemActive 
+                  ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-500/80 text-teal-950 dark:text-teal-200 shadow-sm'
+                  : 'bg-white dark:bg-slate-800 border-slate-200/90 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
+              }">
+              
+              <!-- State indicator -->
+              <div class="w-full flex justify-end min-h-[14px]">
+                ${isItemActive && assignedPerson ? `
+                  <span class="text-[9px] px-1 py-0.2 rounded-full font-bold ${assignedPerson.colorClass}">
+                    ${assignedPerson.name}
+                  </span>
+                ` : ''}
+              </div>
+
+              <!-- Item Icon -->
+              <span class="text-2xl my-0.5 filter drop-shadow-sm">${item.icon}</span>
+
+              <!-- Item Name -->
+              <span class="text-[11px] font-semibold leading-tight line-clamp-2 w-full">${item.name}</span>
+            </button>
+          `;
+        }).join('');
+
+        return `
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5 px-0.5">
+              <span>${cat.icon}</span>
+              <span>${cat.title}</span>
+            </h4>
+            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              ${tilesHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * 1-KLICK AUF KATALOG-KACHEL
+     * Fügt den Artikel sofort für die aktuell ausgewählte Person hinzu!
+     */
+    function onCatalogTileClick(rawName, icon) {
+      const name = decodeURIComponent(rawName);
+      addItemToActiveList(name, icon || '📦', appData.activeAssignPerson);
+    }
+
+    /**
+     * SCHNELLAUSWAHL: ZULETZT VERWENDET
+     */
+    function renderRecents() {
+      const container = document.getElementById('recentTilesRow');
+      if (!container) return;
+
+      if (!appData.recents || appData.recents.length === 0) {
+        document.getElementById('recentContainer').classList.add('hidden');
+        return;
+      }
+      document.getElementById('recentContainer').classList.remove('hidden');
+
+      container.innerHTML = appData.recents.slice(0, 10).map(name => {
+        const icon = findIconForItem(name);
+        return `
+          <button 
+            onclick="onCatalogTileClick('${encodeURIComponent(name)}', '${icon}')"
+            class="tile-tap flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-teal-500 whitespace-nowrap shadow-sm active:scale-95">
+            <span>${icon}</span>
+            <span>${name}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function addToRecents(name) {
+      if (!name) return;
+      appData.recents = [name, ...appData.recents.filter(n => n.toLowerCase() !== name.toLowerCase())].slice(0, 16);
+      localStorage.setItem('packliste_sarn_recents', JSON.stringify(appData.recents));
+    }
+
+    /**
+     * ARTIKEL HINZUFÜGEN LOGIK
+     */
+    function addItemToActiveList(name, icon, personId) {
+      if (!name || !name.trim()) return;
+      const cleanName = name.trim();
+      const currentList = appData.lists[appData.currentDirection] || [];
+
+      // Prüfen ob bereits in der Liste (ungepackt)
+      const existing = currentList.find(i => !i.packed && i.name.toLowerCase() === cleanName.toLowerCase() && i.person === personId);
+      if (existing) {
+        existing.qty = (existing.qty || 1) + 1;
+        showToast(`+1 für ${existing.name} (${existing.qty}x)`);
+      } else {
+        // Prüfen ob abgehakt existiert -> reaktivieren
+        const existingPacked = currentList.find(i => i.packed && i.name.toLowerCase() === cleanName.toLowerCase() && i.person === personId);
+        if (existingPacked) {
+          existingPacked.packed = false;
+          existingPacked.qty = 1;
+          showToast(`✓ "${cleanName}" reaktiviert!`);
+        } else {
+          // Neu erstellen
+          const newItem = {
+            id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            name: cleanName,
+            icon: icon || findIconForItem(cleanName),
+            person: personId || appData.activeAssignPerson,
+            packed: false,
+            qty: 1
+          };
+          currentList.unshift(newItem);
+          const p = FAMILY_MEMBERS.find(f => f.id === newItem.person);
+          showToast(`+ "${cleanName}" für ${p ? p.name : 'Haushalt'}`);
+        }
+      }
+
+      addToRecents(cleanName);
+      saveToStorage();
+      renderAll();
+    }
+
+    /**
+     * EINGABEFELD & LIVE-AUTOCOMPLETE
+     */
+    function handleInputSearch(query) {
+      const dd = document.getElementById('autocompleteDropdown');
+      if (!dd) return;
+
+      const q = query.trim().toLowerCase();
+      if (!q) {
+        dd.classList.add('hidden');
+        return;
+      }
+
+      // Sammle alle bekannten Artikel aus dem Katalog
+      const allCatalogItems = [];
+      CATALOG_DATABASE.forEach(cat => {
+        cat.items.forEach(it => {
+          allCatalogItems.push(it);
+        });
+      });
+
+      // Filter matches
+      const matches = allCatalogItems.filter(it => it.name.toLowerCase().includes(q));
+
+      let html = '';
+      if (matches.length > 0) {
+        html += matches.slice(0, 6).map(it => `
+          <div 
+            onclick="selectAutocompleteItem('${encodeURIComponent(it.name)}', '${it.icon}')"
+            class="flex items-center justify-between px-3.5 py-2.5 hover:bg-teal-50 dark:hover:bg-slate-700/80 cursor-pointer transition">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">${it.icon}</span>
+              <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">${it.name}</span>
+            </div>
+            <span class="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase">Hinzufügen</span>
+          </div>
+        `).join('');
+      }
+
+      // Option für freie Texteingabe
+      html += `
+        <div 
+          onclick="submitFromInput()"
+          class="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 dark:bg-slate-700/40 hover:bg-teal-50 dark:hover:bg-slate-700 cursor-pointer transition border-t border-slate-100 dark:border-slate-700">
+          <div class="flex items-center gap-2">
+            <span class="text-teal-600 dark:text-teal-400 font-bold text-sm">➕</span>
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-200">"${query}" als neuen Artikel anlegen</span>
+          </div>
+          <span class="text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded font-bold">Enter</span>
+        </div>
+      `;
+
+      dd.innerHTML = html;
+      dd.classList.remove('hidden');
+    }
+
+    function handleInputKeydown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitFromInput();
+      }
+    }
+
+    function selectAutocompleteItem(encodedName, icon) {
+      const name = decodeURIComponent(encodedName);
+      addItemToActiveList(name, icon, appData.activeAssignPerson);
+      clearInput();
+    }
+
+    function submitFromInput() {
+      const inp = document.getElementById('itemInput');
+      if (!inp || !inp.value.trim()) return;
+      const text = inp.value.trim();
+      addItemToActiveList(text, findIconForItem(text), appData.activeAssignPerson);
+      clearInput();
+    }
+
+    function clearInput() {
+      const inp = document.getElementById('itemInput');
+      const dd = document.getElementById('autocompleteDropdown');
+      if (inp) inp.value = '';
+      if (dd) dd.classList.add('hidden');
+    }
+
+    function findIconForItem(name) {
+      const lower = name.toLowerCase();
+      for (const cat of CATALOG_DATABASE) {
+        for (const it of cat.items) {
+          if (it.name.toLowerCase() === lower) return it.icon;
+        }
+      }
+      // Heuristiken für Symbole
+      if (lower.includes('ski') || lower.includes('schnee')) return '⛷️';
+      if (lower.includes('hose') || lower.includes('jeans')) return '👖';
+      if (lower.includes('schuh') || lower.includes('keen')) return '🥾';
+      if (lower.includes('bad') || lower.includes('schwimm')) return '🩱';
+      if (lower.includes('brille')) return '👓';
+      if (lower.includes('bett') || lower.includes('kissen')) return '🛏️';
+      if (lower.includes('socke')) return '🧦';
+      if (lower.includes('velo') || lower.includes('bike')) return '🚴';
+      if (lower.includes('jacke') || lower.includes('fleece') || lower.includes('hoodie')) return '🧥';
+      if (lower.includes('apfel') || lower.includes('brot') || lower.includes('essen')) return '🍎';
+      return '📦';
+    }
+
+    /**
+     * BADGES & MENGEN-ANZEIGEN
+     */
+    function updateBadgesAndCounts() {
+      const listSarn = appData.lists.nach_sarn || [];
+      const listHome = appData.lists.nach_hause || [];
+
+      const activeSarn = listSarn.filter(i => !i.packed).length;
+      const activeHome = listHome.filter(i => !i.packed).length;
+
+      const badgeSarn = document.getElementById('badgeCountSarn');
+      const badgeHome = document.getElementById('badgeCountHome');
+      if (badgeSarn) badgeSarn.textContent = activeSarn;
+      if (badgeHome) badgeHome.textContent = activeHome;
+
+      const currentList = appData.lists[appData.currentDirection] || [];
+      let currentActive = currentList.filter(i => !i.packed);
+      let currentPacked = currentList.filter(i => i.packed);
+
+      if (appData.activeFilterPerson !== 'alle') {
+        currentActive = currentActive.filter(i => i.person === appData.activeFilterPerson);
+        currentPacked = currentPacked.filter(i => i.person === appData.activeFilterPerson);
+      }
+
+      const activeCountBadge = document.getElementById('activeItemsCountBadge');
+      const packedCountBadge = document.getElementById('packedItemsCountBadge');
+      if (activeCountBadge) activeCountBadge.textContent = `(${currentActive.length})`;
+      if (packedCountBadge) packedCountBadge.textContent = currentPacked.length;
+    }
+
+    /**
+     * MODAL: ARTIKEL AKTIONEN (MENGE / PERSON / LÖSCHEN)
+     */
+    function openItemActionModal(itemId) {
+      const currentList = appData.lists[appData.currentDirection] || [];
+      const item = currentList.find(i => i.id === itemId);
+      if (!item) return;
+
+      editingItemModalRef = item;
+      document.getElementById('modalItemTitle').textContent = item.name;
+      document.getElementById('modalItemIcon').textContent = item.icon || '📦';
+      document.getElementById('modalItemQty').textContent = item.qty || 1;
+
+      // Person Buttons
+      const personContainer = document.getElementById('modalPersonButtons');
+      personContainer.innerHTML = FAMILY_MEMBERS.map(m => {
+        const isSelected = item.person === m.id;
+        return `
+          <button 
+            type="button"
+            onclick="setModalItemPerson('${m.id}')"
+            class="py-2 px-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition active:scale-95 ${
+              isSelected 
+                ? 'bg-teal-600 text-white border-teal-600 ring-2 ring-teal-400' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+            }">
+            <span class="w-2 h-2 rounded-full" style="background-color: ${m.dotColor}"></span>
+            <span>${m.name}</span>
+          </button>
+        `;
+      }).join('');
+
+      document.getElementById('itemActionModal').classList.remove('hidden');
+    }
+
+    function closeItemActionModal() {
+      document.getElementById('itemActionModal').classList.add('hidden');
+      editingItemModalRef = null;
+    }
+
+    function setModalItemPerson(personId) {
+      if (!editingItemModalRef) return;
+      editingItemModalRef.person = personId;
+      openItemActionModal(editingItemModalRef.id);
+    }
+
+    function adjustModalItemQty(delta) {
+      if (!editingItemModalRef) return;
+      let newQty = (editingItemModalRef.qty || 1) + delta;
+      if (newQty < 1) newQty = 1;
+      editingItemModalRef.qty = newQty;
+      document.getElementById('modalItemQty').textContent = newQty;
+    }
+
+    function deleteActiveItemModal() {
+      if (!editingItemModalRef) return;
+      const currentList = appData.lists[appData.currentDirection] || [];
+      appData.lists[appData.currentDirection] = currentList.filter(i => i.id !== editingItemModalRef.id);
+      saveToStorage();
+      closeItemActionModal();
+      renderAll();
+      showToast('Artikel entfernt');
+    }
+
+    function saveItemActionModal() {
+      saveToStorage();
+      closeItemActionModal();
+      renderAll();
+    }
+
+    function openCustomItemModal() {
+      const name = prompt('Name des neuen Artikels für Sarn:');
+      if (name && name.trim()) {
+        addItemToActiveList(name.trim(), findIconForItem(name.trim()), appData.activeAssignPerson);
+      }
+    }
+
+    /**
+     * EINSTELLUNGEN & RESET FUNKTIONEN
+     */
+    function openSettingsModal() {
+      const input = document.getElementById('settingScriptUrl');
+      if (input) input.value = GOOGLE_SCRIPT_URL || '';
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function saveGoogleScriptUrl() {
+      const input = document.getElementById('settingScriptUrl');
+      GOOGLE_SCRIPT_URL = input.value.trim();
+      localStorage.setItem('packliste_sarn_script_url', GOOGLE_SCRIPT_URL);
+      updateCloudStatusBadge(false);
+      showToast('Cloud-URL gespeichert!');
+      if (GOOGLE_SCRIPT_URL) {
+        syncWithGoogleSheet();
+      }
+    }
+
+    function confirmResetTripList() {
+      if (confirm(`Möchtest du wirklich alle Artikel für "${appData.currentDirection === 'nach_sarn' ? 'Nach Sarn' : 'Nach Hause'}" leeren?`)) {
+        appData.lists[appData.currentDirection] = [];
+        saveToStorage();
+        renderAll();
+        closeSettingsModal();
+        showToast('Fahrt-Liste geleert');
+      }
+    }
+
+    function confirmResetToDefault() {
+      if (confirm('Möchtest du die gesamte App auf den Standard-Familienzustand zurücksetzen?')) {
+        appData.lists = getDefaultState();
+        saveToStorage();
+        renderAll();
+        closeSettingsModal();
+        showToast('Standard-Packliste wiederhergestellt');
+      }
+    }
+
+    function exportDataJson() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData.lists, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `packliste_sarn_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Packliste als JSON exportiert');
+    }
+
+    function importDataJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (parsed && (parsed.nach_sarn || parsed.nach_hause)) {
+            appData.lists = parsed;
+            saveToStorage();
+            renderAll();
+            closeSettingsModal();
+            showToast('✓ Daten erfolgreich importiert!');
+          } else {
+            alert('Ungültiges Format der JSON-Datei.');
+          }
+        } catch (err) {
+          alert('Fehler beim Lesen der JSON-Datei.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /**
+     * THEME TOGGLE (LIGHT / DARK)
+     */
+    function initTheme() {
+      const savedTheme = localStorage.getItem('packliste_theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('packliste_theme', isDark ? 'dark' : 'light');
+    }
+
+    /**
+     * TOAST BENACHRICHTIGUNG
+     */
+    let toastTimeout = null;
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastMessage');
+      if (!toast || !text) return;
+
+      text.textContent = msg;
+      if (isError) {
+        toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2.5 rounded-full text-xs font-bold shadow-2xl backdrop-blur-md transition-all flex items-center gap-1.5 border border-red-400';
+      } else {
+        toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 px-4 py-2 rounded-full text-xs font-bold shadow-xl backdrop-blur-md transition-all flex items-center gap-1.5';
+      }
+      toast.classList.remove('hidden');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, isError ? 3500 : 2200);
+    }
+  </script>
+</body>
+</html>

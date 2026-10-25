@@ -1,0 +1,6 @@
+{
+  "name": "Packliste Sarn",
+  "description": "Minimalistische Bring!-Style Familien-Packliste für das Ferienhaus in Sarn mit 1-Klick-Workflow",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
